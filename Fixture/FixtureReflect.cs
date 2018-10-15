@@ -7,30 +7,17 @@
 
     public class FixtureReflect : IFixture
     {
-        private readonly Dictionary<string, FieldInfo> fields;
-        private readonly Dictionary<string, PropertyInfo> properties;
-        private readonly Random random;
         public Type TargetType
         {
             get; private set;
         }
         private readonly ConstructorInfo constructorInfo;
         private readonly ParameterInfo[] parameterInfos;
-        private readonly Dictionary<string, Tuple<object, FieldInfo>> fieldsObjects;
-        private readonly Dictionary<string, Tuple<object, PropertyInfo>> propertiesObjects;
-        private readonly Dictionary<string, Tuple<IFixture, FieldInfo>> fieldsFixture;
-        private readonly Dictionary<string, Tuple<IFixture, PropertyInfo>> propertiesFixture;
-
+        
+        
         public FixtureReflect(Type type)
         {
             this.TargetType = type;
-            this.fields = new Dictionary<string, FieldInfo>();
-            this.properties = new Dictionary<string, PropertyInfo>();
-            this.fieldsObjects = new Dictionary<string, Tuple<object, FieldInfo>>();
-            this.propertiesObjects = new Dictionary<string, Tuple<object, PropertyInfo>>();
-            this.fieldsFixture = new Dictionary<string, Tuple<IFixture, FieldInfo>>();
-            this.propertiesFixture = new Dictionary<string, Tuple<IFixture, PropertyInfo>>();
-            this.random = new Random();
             this.constructorInfo = this.TargetType.GetConstructors().GetValue(0) as ConstructorInfo;
             if (this.constructorInfo != null)
                 this.parameterInfos = this.constructorInfo.GetParameters();
@@ -39,25 +26,58 @@
         public object New()
         {
             var obj = GetObject();
-            if (this.fields.Count != 0)
-            {
-                var keys = this.fields.Keys;
-                foreach (var key in keys)
-                {
-                    var field = this.fields[key];
-                    field.SetValue(obj, GetRandomValue(field.FieldType));
-                }
-            }
+            SetFields(obj);
+            SetProperties(obj);
+            return obj;
+        }
+
+        private void SetProperties(object obj)
+        {
             if (this.properties.Count != 0)
             {
                 var keys = this.properties.Keys;
                 foreach (var key in keys)
                 {
                     var property = this.properties[key];
+                    if (property.GetCustomAttribute(typeof(ValidationAttribute)) is ValidationAttribute attribute)
+                    {
+                        var methodInfo = this.TargetType.GetMethod(attribute.Validation);
+                        var value = GetRandomValue(property.PropertyType);
+                        var result = (bool)methodInfo.Invoke(obj, new object[] { value });
+                        while (!result)
+                        {
+                            value = GetRandomValue(property.PropertyType);
+                            result = (bool)methodInfo.Invoke(obj, new object[] { value });
+                        }
+                        property.SetValue(obj, value);
+                    }
                     property.SetValue(obj, GetRandomValue(property.PropertyType));
                 }
             }
-            return obj;
+        }
+
+        private void SetFields(object obj)
+        {
+            if (this.fields.Count != 0)
+            {
+                var keys = this.fields.Keys;
+                foreach (var key in keys)
+                {
+                    var field = this.fields[key];
+                    if (field.GetCustomAttribute(typeof(ValidationAttribute)) is ValidationAttribute attribute)
+                    {
+                        var methodInfo = this.TargetType.GetMethod(attribute.Validation);
+                        var value = GetRandomValue(field.FieldType);
+                        var result = (bool)methodInfo.Invoke(obj, new object[] { value });
+                        while (!result)
+                        {
+                            value = GetRandomValue(field.FieldType);
+                            result = (bool)methodInfo.Invoke(obj, new object[] { value });
+                        }
+                        field.SetValue(obj, value);
+                    }
+                }
+            }
         }
 
         private object GetObject()
@@ -72,25 +92,6 @@
                 parameters.Add(GetRandomValue(parameterInfo.ParameterType));
             }
             return this.constructorInfo.Invoke(parameters.ToArray());
-        }
-
-        private object GetRandomValue(Type parameterType)
-        {
-            if (parameterType.IsValueType && parameterType.IsPrimitive)
-                return Activator.CreateInstance(parameterType);
-            if (parameterType.Equals(typeof(string)))
-                return RandomString();
-            if (parameterType.IsArray)
-                return new FixtureReflect(parameterType.GetElementType()).Fill(this.random.Next(1, 20));
-            else
-                return new FixtureReflect(parameterType).New();
-        }
-
-        private string RandomString()
-        {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-            return new string(Enumerable.Repeat(chars, 50)
-              .Select(s => s[this.random.Next(s.Length)]).ToArray());
         }
 
         public object[] Fill(int size)
