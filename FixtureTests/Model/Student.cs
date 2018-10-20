@@ -21,10 +21,10 @@
         {
             get; set;
         }
-        public Address Addr
-        {
-            get; set;
-        }
+        //public Address Addr
+        //{
+        //    get; set;
+        //}
         public string naturality;
 
     }

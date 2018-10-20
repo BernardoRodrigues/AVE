@@ -70,8 +70,8 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Fixture\Fixtr.csproj">
-      <Project>{f7b4f9ad-c757-4c28-a19f-0a1862da0da7}</Project>
+    <ProjectReference Include="..\Fixtr\Fixtr.csproj">
+      <Project>{fb2c3aae-c0a1-4167-8200-657e0a5679ef}</Project>
       <Name>Fixtr</Name>
     </ProjectReference>
   </ItemGroup>

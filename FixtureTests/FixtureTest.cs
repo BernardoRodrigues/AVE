@@ -1,6 +1,7 @@
 ﻿namespace FixtureTests
 {
-    using Fixtr.IFixture;
+    using Fixtr;
+    using FixtureTests.Model;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
 
     [TestClass]
@@ -9,8 +10,12 @@
         [TestMethod]
         public void CreateStudentUsingNew()
         {
-            IFixture fixture = new FixtureReflect();
-
+            //IFixture fixture = new FixtureReflect();
+            var school = (School)new FixtureReflect(typeof(School))
+                        .New();
+            Assert.IsNotNull(school);
+            Assert.IsNotNull(school.Name);
+            Assert.IsNotNull(school.something);
         }
     }
 }
